@@ -1,44 +1,124 @@
 import React from "react";
-import logo from "@assets/img/logo.svg";
-import "@pages/newtab/Newtab.css";
+import { useEffect } from "react";
 import "@pages/newtab/Newtab.scss";
-import useStorage from "@src/shared/hooks/useStorage";
-import exampleThemeStorage from "@src/shared/storages/exampleThemeStorage";
-import withSuspense from "@src/shared/hoc/withSuspense";
+import { Square } from "./Square";
+import { Todo } from "./Todo";
+import { useLocalStorage } from "./useLocalStorage";
+import { AddItem } from "./AddItem";
+
+//
+//! acho que os props dos icones podem melhorar...
+import { ShowIcon } from "./ShowIcon";
+import { ToggleIcon } from "./ToggleIcon";
+import { icons } from "./icons";
+// import "@src/pages/newtab/autoCloseTab";
+
+const TopBar = ({ children }) => {
+  return <div className="topbar">{children}</div>;
+};
 
 const Newtab = () => {
-  const theme = useStorage(exampleThemeStorage);
+  let tabsData = [
+    {
+      link: "https://brilliant.org/",
+      name: "brilliant",
+      id: 0,
+      active: false,
+    },
+    {
+      id: 1,
+      link: "https://leetcode.com/",
+      name: "leetcode",
+      active: false,
+    },
+    {
+      id: 2,
+      link: "https://pt.duolingo.com/",
+      name: "duolingo",
+      active: false,
+    },
+  ];
+
+  const today = new Date().toLocaleDateString("en-GB");
+
+  const [tabs, setTabs] = useLocalStorage("tabs", tabsData);
+  const [setting, setSetting] = useLocalStorage("setting", true);
+  const [show, setShow] = useLocalStorage("show", true);
+  const [showNewItem, setShowNewItem] = useLocalStorage("newItem", true);
+  const [history, setHistory] = useLocalStorage("history", { [today]: tabs });
+
+  const resetTabs = () =>
+    tabs.map((i) => {
+      return { ...i, active: false };
+    });
+
+  useEffect(() => {
+    console.log(today, history.hasOwnProperty(today));
+
+    if (history.hasOwnProperty(today)) return;
+    setTabs(resetTabs());
+  }, []);
+
+  useEffect(() => {
+    console.log("Saving:", today);
+    setHistory({ ...history, [today]: tabs });
+    console.log("Saved:", history);
+  }, [tabs]);
+
+  const toggleActiveItem = (inside: any) => {
+    setTabs(inside);
+  };
 
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/pages/newtab/Newtab.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React!
-        </a>
-        <h6>The color of this paragraph is defined using SASS.</h6>
-        <span className="text-lime-400">
-          The color of this paragraph is defined using Tailwind CSS.
-        </span>
-        <button
-          style={{
-            color: theme === "light" ? "#fff" : "#000",
+      {tabs.map((element) => {
+        return (
+          <Square
+            click={setting}
+            tabs={tabs}
+            link={element.link}
+            index={element.id}
+            active={element.active}
+            toggleActiveItem={(input) => toggleActiveItem(input)}
+          >
+            {element.name}
+          </Square>
+        );
+      })}
+      <TopBar>
+        <ShowIcon
+          setShow={setShow}
+          show={show}
+          label="Todo"
+          icon={<icons.show />}
+          iconAfter={<icons.showOff />}
+        />
+
+        <ToggleIcon
+          active={setting}
+          clickEvent={(e) => setSetting((current) => !current)}
+          icon={<icons.settings />}
+        />
+
+        <ShowIcon
+          setShow={setShowNewItem}
+          show={showNewItem}
+          label="New item"
+          icon={<icons.add />}
+          iconAfter={<icons.close />}
+        />
+
+        <ToggleIcon
+          clickEvent={() => {
+            setTabs(resetTabs());
           }}
-          onClick={exampleThemeStorage.toggle}
-        >
-          Toggle theme: [{theme}]
-        </button>
-      </header>
+          icon={<icons.refresh />}
+        />
+      </TopBar>
+      {show && <Todo />}
+      {showNewItem && <AddItem tabs={tabs} setTabs={setTabs} />}
     </div>
   );
 };
 
-export default withSuspense(Newtab);
+export default Newtab;
